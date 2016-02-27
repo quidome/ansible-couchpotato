@@ -4,4 +4,4 @@
     service: name=couchpotato state=restarted
 
   - name: Reload CouchPotato service config
-    command: "{{ couchpotato_service_reload_command }}"
+    command: "{{ couchpotato_service_reload_command }} {{ couchpotato_service_file.dest }}"

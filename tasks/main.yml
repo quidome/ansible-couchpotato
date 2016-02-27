@@ -9,18 +9,25 @@
       gid: "{{ couchpotato_group_gid }}"
       system: true
       state: present
-           
+
   - name: Ensure CouchPotato service user exists
     user:
       name: "{{ couchpotato_user_name }}"
       uid: "{{ couchpotato_user_uid }}"
       group: "{{ couchpotato_group_name }}"
-      home: "{{ couchpotato_user_home }}"
+      home: "{{ couchpotato_conf_path }}/.."
+      createhome: no
       system: true
       state: present
 
+  - name: Ensure Couchpotato deps are installed
+    pkgin: name={{ item }} state=present
+    with_items: couchpotato_dependencies
+    when: ansible_os_family == "Solaris"
+
   - name: Ensure CouchPotato dependencies are installed
     package: name={{ couchpotato_dependencies }} state=present
+    when: ansible_os_family != "Solaris"
 
   - name: Ensure CouchPotato library directory exists
     file:
@@ -37,14 +44,22 @@
       recurse: true
       state: directory
 
+  - name: Copy configuration file into config directory
+    template:
+      src: settings.conf.j2
+      dest: "{{ couchpotato_conf_path }}/settings.conf"
+      owner: "{{ couchpotato_user_name }}"
+      group: "{{ couchpotato_group_name }}"
+      mode: 0600
+
   - name: Fetch CouchPotato source code
     git:
       repo: "{{ couchpotato_clone_uri }}"
-      dest: "{{ couchpotato_user_home }}/src"
+      dest: "{{ couchpotato_bin_path }}"
       update: false
       accept_hostkey: true
-    become: true
-    become_user: "{{ couchpotato_user_name }}"
+    # become: true
+    # become_user: "{{ couchpotato_user_name }}"
 
   - name: Deploy CouchPotato service manifest
     template:

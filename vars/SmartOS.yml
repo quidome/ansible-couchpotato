@@ -1,0 +1,7 @@
+---
+couchpotato_dependencies:
+  - git
+  - py27-lxml
+  - py27-OpenSSL
+  - py27-sqlite3
+  - unrar
