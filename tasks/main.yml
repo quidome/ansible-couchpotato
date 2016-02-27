@@ -15,7 +15,7 @@
       name: "{{ couchpotato_user_name }}"
       uid: "{{ couchpotato_user_uid }}"
       group: "{{ couchpotato_group_name }}"
-      home: "{{ couchpotato_conf_path }}/.."
+      home: "{{ couchpotato_user_home }}"
       createhome: no
       system: true
       state: present
@@ -38,7 +38,7 @@
 
   - name: Ensure CouchPotato config directory exists
     file:
-      dest: "{{ couchpotato_conf_path }}"
+      dest: "{{ couchpotato_data_path }}"
       owner: "{{ couchpotato_user_name }}"
       group: "{{ couchpotato_group_name }}"
       recurse: true
@@ -47,10 +47,11 @@
   - name: Copy configuration file into config directory
     template:
       src: settings.conf.j2
-      dest: "{{ couchpotato_conf_path }}/settings.conf"
+      dest: "{{ couchpotato_data_path }}/settings.conf"
       owner: "{{ couchpotato_user_name }}"
       group: "{{ couchpotato_group_name }}"
       mode: 0600
+    when: couchpotato_config.manage_config
 
   - name: Fetch CouchPotato source code
     git:
