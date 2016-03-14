@@ -1,10 +1,11 @@
+# {{ ansible_managed }}
 [Unit]
 Description=CouchPotato Server
 After=network.target
 
 [Service]
 WorkingDirectory={{ couchpotato_user_home }}
-ExecStart={{ couchpotato_user_home }}/src/CouchPotato.py --daemon 
+ExecStart={{ couchpotato_user_home }}/src/CouchPotato.py --daemon
 GuessMainPID=no
 Type=forking
 User={{ couchpotato_user_name }}
