@@ -1,79 +1,78 @@
 ---
+- include_vars: "{{ ansible_distribution }}.yml"
+  when: ansible_os_family != "Debian"
 
-  - include_vars: "{{ ansible_distribution }}.yml"
-    when: ansible_os_family != "Debian"
+- name: Ensure CouchPotato service group exists
+  group:
+    name: "{{ couchpotato_group_name }}"
+    gid: "{{ couchpotato_group_gid }}"
+    system: true
+    state: present
 
-  - name: Ensure CouchPotato service group exists
-    group:
-      name: "{{ couchpotato_group_name }}"
-      gid: "{{ couchpotato_group_gid }}"
-      system: true
-      state: present
+- name: Ensure CouchPotato service user exists
+  user:
+    name: "{{ couchpotato_user_name }}"
+    uid: "{{ couchpotato_user_uid }}"
+    group: "{{ couchpotato_group_name }}"
+    home: "{{ couchpotato_user_home }}"
+    createhome: no
+    system: true
+    state: present
 
-  - name: Ensure CouchPotato service user exists
-    user:
-      name: "{{ couchpotato_user_name }}"
-      uid: "{{ couchpotato_user_uid }}"
-      group: "{{ couchpotato_group_name }}"
-      home: "{{ couchpotato_user_home }}"
-      createhome: no
-      system: true
-      state: present
+- name: Ensure Couchpotato deps are installed
+  pkgin: name={{ item }} state=present
+  with_items: "{{ couchpotato_dependencies }}"
+  when: ansible_os_family == "Solaris"
 
-  - name: Ensure Couchpotato deps are installed
-    pkgin: name={{ item }} state=present
-    with_items: couchpotato_dependencies
-    when: ansible_os_family == "Solaris"
+- name: Ensure CouchPotato dependencies are installed
+  package: name={{ couchpotato_dependencies }} state=present
+  when: ansible_os_family != "Solaris"
 
-  - name: Ensure CouchPotato dependencies are installed
-    package: name={{ couchpotato_dependencies }} state=present
-    when: ansible_os_family != "Solaris"
+- name: Ensure CouchPotato library directory exists
+  file:
+    dest: "{{ couchpotato_library_path }}"
+    owner: "{{ couchpotato_user_name }}"
+    group: "{{ couchpotato_group_name }}"
+    state: directory
 
-  - name: Ensure CouchPotato library directory exists
-    file:
-      dest: "{{ couchpotato_library_path }}"
-      owner: "{{ couchpotato_user_name }}"
-      group: "{{ couchpotato_group_name }}"
-      state: directory
+- name: Ensure CouchPotato config directory exists
+  file:
+    dest: "{{ couchpotato_data_path }}"
+    owner: "{{ couchpotato_user_name }}"
+    group: "{{ couchpotato_group_name }}"
+    recurse: true
+    state: directory
 
-  - name: Ensure CouchPotato config directory exists
-    file:
-      dest: "{{ couchpotato_data_path }}"
-      owner: "{{ couchpotato_user_name }}"
-      group: "{{ couchpotato_group_name }}"
-      recurse: true
-      state: directory
+- name: Copy configuration file into config directory
+  template:
+    src: settings.conf.j2
+    dest: "{{ couchpotato_data_path }}/settings.conf"
+    owner: "{{ couchpotato_user_name }}"
+    group: "{{ couchpotato_group_name }}"
+    mode: 0600
+  when: couchpotato_config.manage_config
 
-  - name: Copy configuration file into config directory
-    template:
-      src: settings.conf.j2
-      dest: "{{ couchpotato_data_path }}/settings.conf"
-      owner: "{{ couchpotato_user_name }}"
-      group: "{{ couchpotato_group_name }}"
-      mode: 0600
-    when: couchpotato_config.manage_config
+- name: Fetch CouchPotato source code
+  git:
+    repo: "{{ couchpotato_clone_uri }}"
+    dest: "{{ couchpotato_bin_path }}"
+    update: false
+    accept_hostkey: true
+  # become: true
+  # become_user: "{{ couchpotato_user_name }}"
 
-  - name: Fetch CouchPotato source code
-    git:
-      repo: "{{ couchpotato_clone_uri }}"
-      dest: "{{ couchpotato_bin_path }}"
-      update: false
-      accept_hostkey: true
-    # become: true
-    # become_user: "{{ couchpotato_user_name }}"
+- name: Deploy CouchPotato service manifest
+  template:
+    src: "{{ couchpotato_service_file.src }}"
+    dest: "{{ couchpotato_service_file.dest }}"
+    owner: root
+    group: root
+    mode: 0600
+  notify:
+    - Reload CouchPotato service config
+    - Restart CouchPotato service
 
-  - name: Deploy CouchPotato service manifest
-    template:
-      src: "{{ couchpotato_service_file.src }}"
-      dest: "{{ couchpotato_service_file.dest }}"
-      owner: root
-      group: root
-      mode: 0600
-    notify:
-      - Reload CouchPotato service config
-      - Restart CouchPotato service
+- meta: flush_handlers
 
-  - meta: flush_handlers
-
-  - name: Ensure the CouchPotato service is running and enabled on boot
-    service: name=couchpotato state=started enabled=yes
+- name: Ensure the CouchPotato service is running and enabled on boot
+  service: name=couchpotato state=started enabled=yes
